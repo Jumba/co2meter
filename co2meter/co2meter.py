@@ -33,7 +33,7 @@ _CO2MON_MAGIC_TABLE = (0, 0, 0, 0, 0, 0, 0, 0)
 _CODE_END_MESSAGE = 0x0D
 _CODE_CO2 = 0x50
 _CODE_TEMPERATURE = 0x42
-_CODE_HUMIDITY = 0x44
+_CODE_HUMIDITY = 0x41
 
 _COLORS = {'r': (0.86, 0.37, 0.34),
            'g': (0.56, 0.86, 0.34),
@@ -205,11 +205,6 @@ class CO2monitor:
             return None, None, None
 
         value = (msg[1] << 8) | msg[2]
-        try:
-            print(msg[0], round(int(value) / 100.0, 1))
-        except:
-            pass
-
         if msg[0] == _CODE_CO2:  # CO2 concentration in ppm
             return int(value), None, None
         elif msg[0] == _CODE_TEMPERATURE:  # Temperature in Celsius
