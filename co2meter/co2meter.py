@@ -33,6 +33,7 @@ _CO2MON_MAGIC_TABLE = (0, 0, 0, 0, 0, 0, 0, 0)
 _CODE_END_MESSAGE = 0x0D
 _CODE_CO2 = 0x50
 _CODE_TEMPERATURE = 0x42
+_CODE_HUMIDITY = 0x44
 
 _COLORS = {'r': (0.86, 0.37, 0.34),
            'g': (0.56, 0.86, 0.34),
@@ -201,31 +202,35 @@ class CO2monitor:
         # Check sum: LSB of sum of first 3 bytes
         bad_msg |= (sum(msg[:3]) & 0xFF) != msg[3]
         if bad_msg:
-            return None, None
+            return None, None, None
 
         value = (msg[1] << 8) | msg[2]
 
         if msg[0] == _CODE_CO2:  # CO2 concentration in ppm
-            return int(value), None
+            return int(value), None, None
         elif msg[0] == _CODE_TEMPERATURE:  # Temperature in Celsius
-            return None, convert_temperature(value)
+            return None, convert_temperature(value), None
+        elif msg[0] == _CODE_HUMIDITY:
+            return None, None, round(int(value) / 100.0, 1)
         else:  # Other codes - so far not decoded
-            return None, None
+            return None, None, None
 
     def _read_co2_temp(self, max_requests=50):
         """ Read one pair of values from the device.
             HID device should be open before
         """
-        co2, temp = None, None
+        co2, temp, hum = None, None, None
         for ii in range(max_requests):
-            _co2, _temp = self.decode_message(self.hid_read())
+            _co2, _temp, _hum = self.decode_message(self.hid_read())
             if _co2 is not None:
                 co2 = _co2
             if _temp is not None:
                 temp = _temp
-            if (co2 is not None) and (temp is not None):
+            if _hum is not None:
+                hum = _hum
+            if (co2 is not None) and (temp is not None) and (hum is not None):
                 break
-        return now(), co2, temp
+        return now(), co2, temp, hum
 
     #########################################################################
     def read_data_raw(self, max_requests=50):
@@ -258,7 +263,7 @@ class CO2monitor:
             vals = self.read_data_raw(max_requests=max_requests)
             # If pandas is available - return pandas.DataFrame
             if pd is not None:
-                vals = pd.DataFrame({'co2': vals[1], 'temp': vals[2]},
+                vals = pd.DataFrame({'co2': vals[1], 'temp': vals[2], 'humidity': vals[3]},
                                     index=[vals[0]])
             return vals
 
@@ -272,7 +277,7 @@ class CO2monitor:
                 if pd is None:
                     self._data.append(vals)
                 else:
-                    vals = pd.DataFrame({'co2': vals[1], 'temp': vals[2]},
+                    vals = pd.DataFrame({'co2': vals[1], 'temp': vals[2], 'humidity': vals[3]},
                                         index=[vals[0]])
                     self._data = self._data.append(vals)
                 time.sleep(self._interval)
