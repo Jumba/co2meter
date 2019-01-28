@@ -205,7 +205,11 @@ class CO2monitor:
             return None, None, None
 
         value = (msg[1] << 8) | msg[2]
-        print(msg[0])
+        try:
+            print(msg[0], round(int(value) / 100.0, 1))
+        except:
+            pass
+
         if msg[0] == _CODE_CO2:  # CO2 concentration in ppm
             return int(value), None, None
         elif msg[0] == _CODE_TEMPERATURE:  # Temperature in Celsius
